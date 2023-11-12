@@ -1417,15 +1417,15 @@ if(epsilon === 0) {
 
 console.log("avengers");
 
-// fetch('Qtable.json')
-//     .then(response => response.json())
-//     .then(data => {
-//       console.log("the true Qtable lies here.")
-//         const mytable = data;
-//         // Now you can use your Q-table
-//         console.log(mytable);
-//     })
-//     .catch(error => console.error('Error fetching Q-table:', error));
+fetch('Qtable.json')
+    .then(response => response.json())
+    .then(data => {
+      console.log("the true Qtable lies here.")
+        const mytable = data;
+        // Now you can use your Q-table
+        console.log(mytable);
+    })
+    .catch(error => console.error('Error fetching Q-table:', error));
 
 // // Assume rewards is an array of reward values
 // const rewards = [10, 20, 30, 40, 69];
