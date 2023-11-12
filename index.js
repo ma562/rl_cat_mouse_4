@@ -1418,12 +1418,16 @@ if(epsilon === 0) {
 console.log("avengers");
 
 fetch('qTable.json')
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok ' + response.statusText);
+        }
+        return response.json();
+    })
     .then(data => {
-      console.log("the true Qtable lies here.")
-        const mytable = data;
-        // Now you can use your Q-table
-        console.log(mytable);
+        const my_table = data;
+        // Use the Q-table here
+        console.log(my_table);
     })
     .catch(error => console.error('Error fetching Q-table:', error));
 
