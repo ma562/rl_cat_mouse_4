@@ -1427,6 +1427,8 @@ fetch('Qtable.json')
     })
     .catch(error => console.error('Error fetching Q-table:', error));
 
+console.log("so did we get the Qtable")
+
 // // Assume rewards is an array of reward values
 // const rewards = [10, 20, 30, 40, 69];
 
