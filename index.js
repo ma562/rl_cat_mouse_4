@@ -27,16 +27,6 @@ window.numCats = numCats;
 const mapCollection = {
   map1: [
     // Map 1 original map
-// ['-', ' ', '-', '-', '-', '-', '-', '-', '-', '-'],
-// ['-', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '-'],
-// ['-', ' ', '-', '-', '-', ' ', ' ', '-', ' ', '-'],
-// ['-', ' ', ' ', ' ', ' ', ' ', '-', '-', ' ', '-'],
-// ['-', '-', '-', ' ', '-', ' ', ' ', '-', ' ', '-'],
-// ['-', ' ', ' ', ' ', '-', '-', ' ', '-', ' ', '-'],
-// ['-', ' ', '-', ' ', ' ', ' ', ' ', '-', ' ', '-'],
-// ['-', ' ', '-', '-', ' ', ' ', '-', '-', ' ', '-'],
-// ['-', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '-'],
-// ['-', '-', '-', '-', '-', '-', '-', '-', '-', '-']
 ['-', ' ', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-'],
   ['-', ' ', ' ', ' ', ' ', ' ', '-', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '-'],
   ['-', ' ', '-', '-', ' ', ' ', ' ', ' ', '-', ' ', ' ', '-', '-', '-', '-', ' ', '-'],
@@ -581,7 +571,83 @@ function fastestTimes(values, cat_r, cat_c, mouse_r, mouse_c, row_path, col_path
 
 }
 
-//CALCULATE THE MAXIMUM SHORTEST POSSIBLE PATH BETWEEN THE CAT AND MOUSE
+//CREATE THE DEAD END MATRIX
+function createDeadEndMatrix(map) {
+  const deadEndMatrix = [];
+  
+  for (let i = 1; i < map.length - 1; i++) {
+    const row = [];
+    for (let j = 1; j < map[i].length - 1; j++) {
+      // Only consider the spaces that are paths
+      if (map[i][j] === ' ') {
+        // Count the walls surrounding the current path
+        const walls = [
+          map[i - 1][j], // above
+          map[i + 1][j], // below
+          map[i][j - 1], // left
+          map[i][j + 1], // right
+        ].filter(x => x === '-').length;
+        
+        // If there are 3 walls, it's a dead end (mark as 1), otherwise not (mark as 0)
+        row.push(walls === 3 ? 1 : 0);
+      } else {
+        // It's a wall, so we mark it as not a dead end (0)
+        row.push(0);
+      }
+    }
+    deadEndMatrix.push(row);
+  }
+  
+  return deadEndMatrix;
+}
+
+const deadEndMatrix = createDeadEndMatrix(map);
+
+console.log(deadEndMatrix)
+
+//PRECOMPUTE ALL THE DIRECTIONS IN WHICH THE MOUSE HAS TO TAKE TO THE EXIT
+function createPathMatrix(map) {
+  // Initialize an empty matrix for the 8x8 inner part
+  let innerPathMatrix = [];
+
+  // Iterate over the rows, starting from index 1 to index 8 (exclusive of borders)
+  for (let i = 1; i < map.length - 1; i++) {
+    // Extract the inner part of the current row, from index 1 to index 8 (exclusive of borders)
+    let row = map[i].slice(1, -1);
+    // Map '-' to -2 for walls, ' ' to -1 for paths
+    let newRow = row.map(cell => (cell === '-' ? -2 : -1));
+    // Add the new row to the inner matrix
+    innerPathMatrix.push(newRow);
+  }
+
+  return innerPathMatrix;
+}
+
+let count = 0;
+let max_rows = []
+let max_col = []
+
+
+//0 for W (UP), 1 FOR A (LEFT), 2 for S (RIGHT), 3 for D (DOWN)
+let newPathMatrix = createPathMatrix(map);
+newPathMatrix[0][0] = 0;
+
+for (let rowIndex = 0; rowIndex < newPathMatrix.length; rowIndex++) {
+  for (let colIndex = 0; colIndex < newPathMatrix[rowIndex].length; colIndex++) {
+    if(newPathMatrix[rowIndex][colIndex] === -1) {
+      //check all paths. 
+      my_matrix = read_write_values(map);
+      fastestTimes(my_matrix, rowIndex, colIndex, 0, 0, max_rows, max_col)
+
+      newPathMatrix[rowIndex][colIndex] = max_rows.length   //distance to exit
+      //getExitDirection(max_rows[0], max_col[0], rowIndex, colIndex);
+    }
+  }
+}
+
+console.log(newPathMatrix);
+
+//CALCULATE THE MAXIMUM SHORTEST POSSIBLE PATHs BETWEEN THE CAT AND MOUSE
 
 const clearPaths = [];
 console.log("clear paths length is ");
@@ -596,27 +662,36 @@ for (let i = 1; i < map.length - 1; i++) {
   }
 }
 
-let count = 0;
-let max_rows = []
-let max_col = []
 
+let pathLengthMatrix = createPathMatrix(map);
 for (let i = 0; i < clearPaths.length; i++) {
-  for (let j = i + 1; j < clearPaths.length; j++) {
-    let start = clearPaths[i];
-    let end = clearPaths[j];
+  let local_max = 0;
+  // for (let j = i + 1; j < clearPaths.length; j++) {
+  for (let j = 0; j < clearPaths.length; j++) {
+    if(i != j) {
+      let start = clearPaths[i];
+      let end = clearPaths[j];
 
-    my_matrix = read_write_values(map)
+      my_matrix = read_write_values(map)
 
-    fastestTimes(my_matrix, start[0], start[1], end[0], end[1], max_rows, max_col)
-    if(max_rows.length > max_distance) {
-      max_distance = max_rows.length;
+      fastestTimes(my_matrix, start[0], start[1], end[0], end[1], max_rows, max_col)
+      if(max_rows.length > max_distance) {
+        max_distance = max_rows.length;
+      }
+      if(max_rows.length > local_max) {
+        local_max = max_rows.length;
+        pathLengthMatrix[start[0]][[start[1]]] = local_max;
+      }
+      count++;
     }
-    count++;
   }
 }
 
 console.log("max distance is ");
 console.log(max_distance);
+
+console.log(pathLengthMatrix);
+
 //RL PARAMETERS -----------------------------------------------------------------------------
 const KEEP_DISTANCE_EXIT_ATTEMPT = max_distance  //maintain distance from cat AND get closer to exit
 const KEEP_DISTANCE = max_distance / 2  //maintain distance from cat AND get further/maintain distance from exit
@@ -629,8 +704,6 @@ const LEARNING_RATE = 0.1
 const DISCOUNT = 0.95
 let EPISODES = 0;
 //-----------------------------------------------------------------------------
-
-
 
 //GET DIRECTION
 function getCatDirection(mouseRow, mouseCol, catRow, catCol) {
@@ -663,121 +736,77 @@ function getExitDirection(exitRow, exitCol, mouseRow, mouseCol) {
   return null;
 }
 
-//PRECOMPUTE ALL THE DIRECTIONS IN WHICH THE MOUSE HAS TO TAKE TO THE EXIT
-function createPathMatrix(map) {
-  // Initialize an empty matrix for the 8x8 inner part
-  let innerPathMatrix = [];
 
-  // Iterate over the rows, starting from index 1 to index 8 (exclusive of borders)
-  for (let i = 1; i < map.length - 1; i++) {
-    // Extract the inner part of the current row, from index 1 to index 8 (exclusive of borders)
-    let row = map[i].slice(1, -1);
-    // Map '-' to -2 for walls, ' ' to -1 for paths
-    let newRow = row.map(cell => (cell === '-' ? -2 : -1));
-    // Add the new row to the inner matrix
-    innerPathMatrix.push(newRow);
+//MONITOR OSCILLATIONS IN THE RL ENVIRONMENT
+
+let maxHistory = 10;
+let stateHistory = [];
+
+function updateStateHistory(stateHistory, newState, maxHistory) {
+  // Add the new state to the end of the array
+  stateHistory.push(newState);
+  
+  // If the history is longer than maxHistory, remove the oldest entry
+  if (stateHistory.length > maxHistory) {
+    stateHistory.shift(); // Removes the first item from the array
   }
-
-  return innerPathMatrix;
 }
 
-//0 for W (UP), 1 FOR A (LEFT), 2 for S (RIGHT), 3 for D (DOWN)
-let newPathMatrix = createPathMatrix(map);
-newPathMatrix[0][0] = 0;
+function isOscillating(stateHistory, maxHistory) {
+  // The history must have at least maxHistory states to check for oscillation
+  if (stateHistory.length < maxHistory) {
+    return false;
+  }
 
-for (let rowIndex = 0; rowIndex < newPathMatrix.length; rowIndex++) {
-  for (let colIndex = 0; colIndex < newPathMatrix[rowIndex].length; colIndex++) {
-    if(newPathMatrix[rowIndex][colIndex] === -1) {
-      //check all paths. 
-      my_matrix = read_write_values(map);
-      fastestTimes(my_matrix, rowIndex, colIndex, 0, 0, max_rows, max_col)
+  // Get the last maxHistory states
+  const recentStates = stateHistory.slice(-maxHistory);
 
-      newPathMatrix[rowIndex][colIndex] = max_rows.length   //distance to exit
-      //getExitDirection(max_rows[0], max_col[0], rowIndex, colIndex);
+  // Check if all states in the recent history are the same
+  const allStatesSame = recentStates.every(state => state === recentStates[0]);
+  if (allStatesSame) {
+    // If all states are the same, this is not considered oscillating
+    return false;
+  }
+
+  // Check for the alternating pattern in the last maxHistory states
+  // This assumes that the pattern must repeat exactly maxHistory/2 times to be considered oscillation
+  for (let i = 0; i < recentStates.length - 2; i += 2) {
+    if (recentStates[i] !== recentStates[i + 2]) {
+      // If any state does not match the state two steps ahead, it's not oscillating
+      return false;
     }
   }
-}
 
-console.log(newPathMatrix);
+  // If we haven't returned false by now, it means the pattern is oscillating
+  return true;
+}
 
 //CREATING THE QTABLE -----------------------------------------------------------------------------
 
-// const stateSpaceSize = (map.length - 2) ** 2; // Calculate the number of states
-// const directions = [0, 1, 2, 3]; // Representing N, E, S, W respectively
-// const extendedStateSpaceSize = stateSpaceSize * directions.length;
-
-// // Create a mapping from each passable space to a state index
-// let stateSpaceMapping = {};
-// let stateIndex = 0;
-// for (let row = 1; row < map.length - 1; row++) {
-//   for (let col = 1; col < map[row].length - 1; col++) {
-//     if (map[row][col] === ' ') {
-//       stateSpaceMapping[`${row - 1},${col - 1}`] = stateIndex++;
-//     }
-//   }
-// }
-
-// // Expand the state space to include direction
-// let extendedStateSpaceMapping = {};
-// Object.entries(stateSpaceMapping).forEach(([coords, index]) => {
-//   directions.forEach(direction => {
-//     extendedStateSpaceMapping[`${coords}_${direction}`] = index * 4 + direction;
-//   });
-// });
-
-// // Function to get state index based on mouse's coordinates and direction
-// function getStateIndex(row, col, direction) {
-//   const stateIndex = stateSpaceMapping[`${row},${col}`];
-//   if (stateIndex !== undefined) {
-//     // Concatenating row, col, and direction into a string to match the Q-table key format
-//     return `${row},${col}_${direction}`;
-//   }
-//   return null; // Or handle the case where the coordinates are not in the state space
-// }
-
-// // Example usage:
-// console.log(extendedStateSpaceMapping); // Shows the complete state space with directions
-// console.log(getStateIndex(0, 0, 0)); // Retrieves the state for the top-left path when coming from 'N'
-
-// let Qtable = {};
-// for (const extendedState in extendedStateSpaceMapping) {
-//   Qtable[extendedState] = [0, 0, 0, 0]; // Four actions, initialize Q-values to 0
-// }
-
-// const stateDirectionKey = getStateIndex(0, 0, 0);
-// console.log(Qtable);
-
-// const max_distance = 14; 
-
-// Possible directions (N, E, S, W) for cat and exit
 const directions = [0, 1, 2, 3]; 
-
-// Create the extended state space mapping
-// let extendedStateSpaceMapping = {};
-// let stateIndex = 0;
-// for (let row = 1; row < map.length - 1; row++) {
-//   for (let col = 1; col < map[row].length - 1; col++) {
-//     if (map[row][col] === ' ') {
-//       for (let catDirection = 0; catDirection < directions.length; catDirection++) {
-//         for (let distance = 1; distance <= max_distance; distance++) {
-//           for (let exitDirection = 0; exitDirection < directions.length; exitDirection++) {
-//             let key = `${row - 1},${col - 1}_${catDirection}_${distance}_${exitDirection}`;
-//             extendedStateSpaceMapping[key] = stateIndex++;
-//           }
-//         }
-//       }
-//     }
-//   }
-// }
 
 let extendedStateSpaceMapping = {};
 let stateIndex = 0;
+// Note: Adjusted to account for 0-based indices for the inner 8x8 grid
 for (let row = 1; row < map.length - 1; row++) {
   for (let col = 1; col < map[row].length - 1; col++) {
     if (map[row][col] === ' ') {
-      for (let catDirection = 0; catDirection < directions.length; catDirection++) {
-        for (let distance = 1; distance <= max_distance; distance++) {
-          // The key no longer includes the exitDirection
+      // Check for walls around the current position
+      let possibleCatDirections = [];
+      if (map[row - 1][col] === ' ' && (row !== 1 || col !== 1)) { // Check for wall above (we don't have to check at the exit)
+        possibleCatDirections.push(0); // Cat can come from 'up'
+      }
+      if (map[row][col + 1] === ' ') { // Check for wall to the right
+        possibleCatDirections.push(1); // Cat can come from 'left'
+      }
+      if (map[row][col - 1] === ' ') { // Check for wall to the left
+        possibleCatDirections.push(2); // Cat can come from 'right'
+      }
+      if (map[row + 1][col] === ' ') { // Check for wall below
+        possibleCatDirections.push(3); // Cat can come from 'down'
+      }
+      for (let catDirection of possibleCatDirections) {
+        for (let distance = 1; distance <= pathLengthMatrix[row - 1][col - 1]; distance++) {
           let key = `${row - 1},${col - 1}_${catDirection}_${distance}`;
           extendedStateSpaceMapping[key] = stateIndex++;
         }
@@ -787,19 +816,10 @@ for (let row = 1; row < map.length - 1; row++) {
 }
 
 
-// Function to get the extended state index
-// function getStateIndex(row, col, catDirection, mouseCatDistance, exitDirection) {
-//   const key = `${row},${col}_${catDirection}_${mouseCatDistance}_${exitDirection}`;
-//   return key;
-// }
-
 function getStateIndex(row, col, catDirection, mouseCatDistance) {
   const key = `${row},${col}_${catDirection}_${mouseCatDistance}`;
   return key;
 }
-
-// Example usage:
-//console.log(getStateIndex(0, 0, 0, 1, 0)); // This will give you the index for the top-left position, cat coming from 'N', with a distance of 1, and exit direction 'N'
 
 
 // Initialize the Q-table with all states having Q-values for possible actions
@@ -827,23 +847,6 @@ function getBestAction(Qtable, stateKey) {
   return bestAction; // Returns the index of the action with the highest Q-value
 }
 
-
-//this function allows us to grab the best action from the designated state.
-function getBestAction(Qtable, stateDirectionKey) {
-  const actionsQValues = Qtable[stateDirectionKey];
-  if (!actionsQValues) {
-    return null; // or some error handling if the state does not exist
-  }
-  let maxQValue = actionsQValues[0];
-  let bestAction = 0;
-  for (let action = 1; action < actionsQValues.length; action++) {
-    if (actionsQValues[action] > maxQValue) {
-      maxQValue = actionsQValues[action];
-      bestAction = action;
-    }
-  }
-  return bestAction; // Returns the index of the action with the highest Q-value
-}
 
 //STATE SPACE END -----------------------------------------------------------------------------
 
@@ -1054,6 +1057,12 @@ function animate() {
       action = getBestAction(Qtable, state_Index);
     }
     else {
+      action = Math.floor(Math.random() * 4);
+    }
+
+    if (isOscillating(stateHistory, maxHistory)) {
+      console.log('The mouse is oscillating!');
+      // Implement logic to handle oscillation, such as choosing a different action.
       action = Math.floor(Math.random() * 4);
     }
 
@@ -1300,20 +1309,6 @@ function animate() {
       check_edge_case = true;   //be on alert
     }
 
-    //RL REWARDS -----------------------------------------------------------------------------
-
-
-//     const KEEP_DISTANCE_EXIT_ATTEMPT = max_distance  //maintain distance from cat AND get closer to exit
-// const KEEP_DISTANCE = max_distance / 2  //maintain distance from cat AND get further/maintain distance from exit
-// const ESCAPE_ATTEMPT = max_distance   //mouse gets closer to cat, exit gets closer to mouse, exit is closer to mouse than cat is to mouse
-// const CAUGHT = -max_distance * 3
-// const ESCAPE = max_distance * 3
-// let epsilon = 0.9
-// let EPS_DECAY = 0.9998
-// const LEARNING_RATE = 0.1
-// const DISCOUNT = 0.95
-// let EPISODES = 0;
-
     let reward;
     //once we have a feedback of our old distance from cat
     new_cat_distance = myCats[0].rows.length;
@@ -1350,6 +1345,11 @@ function animate() {
       reward = ESCAPE;
     }
 
+    if(restart2 && deadEndMatrix[get_discrete_Y(player.position.y)][get_discrete_X(player.position.x)]) {
+      //EXTRA PENALTY FOR BEING CAUGHT AT A DEAD END
+      reward = -(CAUGHT + max_distance);
+    }
+
     let row_incoming = myCats[0].rows[myCats[0].rows.length - 2];
     let col_incoming = myCats[0].col[myCats[0].col.length - 2];
     let mouse_row = get_discrete_Y(player.position.y);
@@ -1369,6 +1369,8 @@ function animate() {
     else {
       new_q = (1 - LEARNING_RATE) * current_q + LEARNING_RATE * (reward + DISCOUNT * max_future_q);
     }
+
+    updateStateHistory(stateHistory, state_Index, maxHistory);
 
     Qtable[state_Index][action] = new_q;
 
@@ -1398,23 +1400,76 @@ function animate() {
         console.log(EPISODES);
         console.log("todays success");
         console.log(success/20);
-        // // Assuming Qtable is an object where keys are stringified indices.
-        // let keys = Object.keys(Qtable); // This gets the keys of the Q-table
-        // let limit = Math.min(50, keys.length); // Ensures we don't go past the end of the keys
-
-        // for (let i = 700; i < 800; i++) {
-        //   let key = keys[i];
-        //   console.log(`Row ${i}: Key = ${key}, Values = ${Qtable[key]}`);
-        // }
 
         success = 0;
       }
     }
-
     // -----------------------------------------------------------------------------
   }
 
   
 
 }
-animate()
+//animate()
+if(epsilon === 0) {
+  console.log("hello, you are my world");
+}
+
+console.log("avengers");
+
+// fetch('Qtable.json')
+//     .then(response => response.json())
+//     .then(data => {
+//       console.log("the true Qtable lies here.")
+//         const mytable = data;
+//         // Now you can use your Q-table
+//         console.log(mytable);
+//     })
+//     .catch(error => console.error('Error fetching Q-table:', error));
+
+// // Assume rewards is an array of reward values
+// const rewards = [10, 20, 30, 40, 69];
+
+// // Convert rewards array to CSV string
+// const csvContent = rewards.map(e => e.toString()).join("\n");
+
+// // Create a Blob from the CSV String
+// const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+
+// // Create a link element, use it for download, and remove it
+// const url = URL.createObjectURL(blob);
+// const link = document.createElement('a');
+// link.style.display = 'none';
+// link.href = url;
+// link.download = 'rewards.csv';
+// document.body.appendChild(link);
+// link.click();
+// document.body.removeChild(link);
+
+// console.log("but you are not my world");
+
+// const fs = require('fs');
+
+// function saveQTable(Qtable) {
+//     // Convert Q-table to JSON string
+//     const qTableJSON = JSON.stringify(Qtable);
+
+//     // Create a Blob from the JSON String
+//     const blob = new Blob([qTableJSON], { type: 'application/json;charset=utf-8;' });
+
+//     // Create download link and set attributes
+//     const downloadLink = document.createElement('a');
+//     downloadLink.href = URL.createObjectURL(blob);
+//     downloadLink.download = 'qTable.json';
+
+//     // Append link, trigger download, then remove link
+//     document.body.appendChild(downloadLink);
+//     downloadLink.click();
+//     document.body.removeChild(downloadLink);
+// }
+
+// // Example usage:
+// saveQTable(Qtable);
+
+
+
