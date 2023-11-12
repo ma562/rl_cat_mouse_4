@@ -1417,7 +1417,7 @@ if(epsilon === 0) {
 
 console.log("avengers");
 
-fetch('Qtable.json')
+fetch('qTable.json')
     .then(response => response.json())
     .then(data => {
       console.log("the true Qtable lies here.")
