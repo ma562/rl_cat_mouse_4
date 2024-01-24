@@ -1410,12 +1410,6 @@ function animate() {
   
 
 }
-//animate()
-if(epsilon === 0) {
-  console.log("hello, you are my world");
-}
-
-console.log("avengers");
 
 fetch('qTable.json')
     .then(response => {
@@ -1430,52 +1424,6 @@ fetch('qTable.json')
         console.log(my_table);
     })
     .catch(error => console.error('Error fetching Q-table:', error));
-
-console.log("so did we get the Qtable")
-
-// // Assume rewards is an array of reward values
-// const rewards = [10, 20, 30, 40, 69];
-
-// // Convert rewards array to CSV string
-// const csvContent = rewards.map(e => e.toString()).join("\n");
-
-// // Create a Blob from the CSV String
-// const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-
-// // Create a link element, use it for download, and remove it
-// const url = URL.createObjectURL(blob);
-// const link = document.createElement('a');
-// link.style.display = 'none';
-// link.href = url;
-// link.download = 'rewards.csv';
-// document.body.appendChild(link);
-// link.click();
-// document.body.removeChild(link);
-
-// console.log("but you are not my world");
-
-// const fs = require('fs');
-
-// function saveQTable(Qtable) {
-//     // Convert Q-table to JSON string
-//     const qTableJSON = JSON.stringify(Qtable);
-
-//     // Create a Blob from the JSON String
-//     const blob = new Blob([qTableJSON], { type: 'application/json;charset=utf-8;' });
-
-//     // Create download link and set attributes
-//     const downloadLink = document.createElement('a');
-//     downloadLink.href = URL.createObjectURL(blob);
-//     downloadLink.download = 'qTable.json';
-
-//     // Append link, trigger download, then remove link
-//     document.body.appendChild(downloadLink);
-//     downloadLink.click();
-//     document.body.removeChild(downloadLink);
-// }
-
-// // Example usage:
-// saveQTable(Qtable);
 
 
 
